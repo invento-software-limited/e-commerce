@@ -36,23 +36,38 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  let searchInput = document.querySelector("#search-input");
-  let productContainer = document.querySelector("#product_search");
-  if (productContainer) {
+  const searchInput = document.getElementById("search-input");
+  const productSearch = document.getElementById("product_search");
+  if (productSearch) {
+    productSearch.style.display = "none";
+  }
 
-    let originalContent = productContainer.innerHTML;
-    productContainer.innerHTML = "";
+  function positionProductSearch() {
+    const rect = searchInput.getBoundingClientRect();
+    productSearch.style.position = "absolute";
+    productSearch.style.top = `${rect.bottom + window.scrollY}px`;
+    productSearch.style.left = `${rect.left + window.scrollX}px`;
+    productSearch.style.width = `${rect.width}px`;
+    productSearch.style.zIndex = "1000";
+    productSearch.style.display = "block";
+  }
+
+  if (productSearch) {
+
+    let originalContent = productSearch.innerHTML;
+    productSearch.innerHTML = "";
 
     searchInput.addEventListener("input", function () {
       let searchTerm = searchInput.value.toLowerCase();
-
+      positionProductSearch()
       // If search is empty, clear the container
       if (searchTerm.trim() === "") {
-        productContainer.innerHTML = "";
+        productSearch.innerHTML = "";
+        productSearch.style.display = "none";
         return;
       }
 
-      productContainer.innerHTML = ""; // Clear previous results
+      productSearch.innerHTML = ""; // Clear previous results
 
       let filteredProducts = page_data.products.filter(product =>
         product.item_name.toLowerCase().includes(searchTerm)
@@ -67,8 +82,15 @@ document.addEventListener("DOMContentLoaded", function () {
         if (nameElement) {
           nameElement.textContent = product.item_name;
         }
-
-        productContainer.appendChild(tempContainer);
+        let imageElement = tempContainer.querySelector(".product_image");
+        if (imageElement) {
+          imageElement.setAttribute('src', product.image);
+        }
+        let priceElement = tempContainer.querySelector(".product_price p");
+        if (priceElement) {
+          priceElement.textContent = `Price : £${product.standard_selling_rate}`;
+        }
+        productSearch.appendChild(tempContainer);
       });
     });
   }
@@ -164,6 +186,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
     });
   });
+
+  document.querySelectorAll(".btn-reorder").forEach(button => {
+    button.addEventListener("click", function () {
+      let name = this.getAttribute("data-name");
+      if (!name) return;
+      fetch('/api/method/builder_ecommerce.ecommerce.order.order.reorder', {
+        method: "POST",
+        headers: HEADERS,
+        body: JSON.stringify({order_id: name})
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.message) {
+            alert(data.message.message);
+          } else {
+            alert("No message returned from the server.");
+          }
+        })
+        .catch(error => console.error("Error fetching attributes:", error));
+
+    });
+  });
   document.querySelectorAll(".add-to-cart").forEach(button => {
     button.addEventListener("click", function () {
       let itemCode = this.getAttribute("data-item_code");
@@ -198,7 +242,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function get_cart_count() {
     const cartCount = frappe.get_cookie("cart_count") || 0;
-    document.getElementById("cart_count").innerText = `Cart (${cartCount})`;
+    const cartCountContainer = document.getElementById("cart_count");
+    if (cartCountContainer) {
+      cartCountContainer.innerText = `Cart (${cartCount})`;
+    }
   }
 
 
