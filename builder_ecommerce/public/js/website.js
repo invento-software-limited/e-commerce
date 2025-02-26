@@ -161,7 +161,17 @@ document.addEventListener("DOMContentLoaded", function () {
       })
       .then(data => {
         get_cart_count()
-        alert("Item added to cart!");
+        Toastify({
+          text: "Item added to cart!",
+          close: true,
+          destination: "/cart",
+          gravity: "top",
+          position: "center",
+          stopOnFocus: true,
+          style: {
+            background: "linear-gradient(to right, #00b09b, #96c93d)",
+          }
+        }).showToast();
       })
   }
 
@@ -199,7 +209,16 @@ document.addEventListener("DOMContentLoaded", function () {
         .then(response => response.json())
         .then(data => {
           if (data.message) {
-            alert(data.message.message);
+            Toastify({
+              text: data.message.message,
+              close: true,
+              gravity: "top",
+              position: "center",
+              stopOnFocus: true,
+              style: {
+                background: "linear-gradient(to right, #00b09b, #96c93d)",
+              }
+            }).showToast();
           } else {
             alert("No message returned from the server.");
           }
