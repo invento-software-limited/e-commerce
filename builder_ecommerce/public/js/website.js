@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         let priceElement = tempContainer.querySelector(".product_price p");
         if (priceElement) {
-          priceElement.textContent = `Price : £${product.standard_selling_rate}`;
+          priceElement.textContent = `Price : ${product.standard_rate}`;
         }
         productSearch.appendChild(tempContainer);
       });
