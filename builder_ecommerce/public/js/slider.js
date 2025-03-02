@@ -6,6 +6,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   let currentIndex = 1; // Start at the first real slide
   let interval;
+  let startX = 0;
+  let isDragging = false;
   const sliderWidth = sliders[0].offsetWidth + 10;
 
   // Clone first and last slides
@@ -49,6 +51,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 6000);
   }
 
+  function stopAutoSlide() {
+    clearInterval(interval);
+  }
+
   updateActiveSlide(currentIndex, false);
   startAutoSlide();
 
@@ -62,5 +68,34 @@ document.addEventListener("DOMContentLoaded", function () {
       updateActiveSlide(currentIndex, false);
     }
   });
-});
 
+  // Touch events for swipe functionality
+  sliderContainer.addEventListener("touchstart", (e) => {
+    stopAutoSlide();
+    startX = e.touches[0].clientX;
+    isDragging = true;
+  });
+
+  sliderContainer.addEventListener("touchmove", (e) => {
+    if (!isDragging) return;
+    const diff = e.touches[0].clientX - startX;
+    sliderContainer.style.transition = "none";
+    sliderContainer.style.transform = `translateX(${-currentIndex * sliderWidth + diff}px)`;
+  });
+
+  sliderContainer.addEventListener("touchend", (e) => {
+    isDragging = false;
+    const endX = e.changedTouches[0].clientX;
+    const diff = endX - startX;
+
+    if (diff > 50) {
+      // Swipe right
+      currentIndex--;
+    } else if (diff < -50) {
+      // Swipe left
+      currentIndex++;
+    }
+    updateActiveSlide(currentIndex);
+    startAutoSlide();
+  });
+});

@@ -10,30 +10,33 @@ document.addEventListener("DOMContentLoaded", function () {
   get_cart_count()
   if (window.location.pathname === "/cart") {
     get_cart_items();
-    document.getElementById("place-order").addEventListener("submit", async function (event) {
-      event.preventDefault();
+    const placeOrderBtn = document.getElementById("place-order")
+    if (placeOrderBtn) {
+      placeOrderBtn.addEventListener("submit", async function (event) {
+        event.preventDefault();
 
-      let formData = new FormData(this);
-      let jsonData = {};
+        let formData = new FormData(this);
+        let jsonData = {};
 
-      formData.forEach((value, key) => {
-        jsonData[key] = value;
+        formData.forEach((value, key) => {
+          jsonData[key] = value;
+        });
+        let payload = {doc: jsonData, cart_items: frappe.get_cookie("cart_items")};
+        let response = await fetch("/api/method/builder_ecommerce.cart.place_order", {
+          method: "POST",
+          headers: HEADERS,
+          body: JSON.stringify(payload)
+        });
+
+        let result = await response.json();
+        if (result.message) {
+          alert("Address added successfully!");
+          location.reload();
+        } else {
+          alert("Failed to add address.");
+        }
       });
-      let payload = {doc: jsonData, cart_items: frappe.get_cookie("cart_items")};
-      let response = await fetch("/api/method/builder_ecommerce.cart.place_order", {
-        method: "POST",
-        headers: HEADERS,
-        body: JSON.stringify(payload)
-      });
-
-      let result = await response.json();
-      if (result.message) {
-        alert("Address added successfully!");
-        location.reload();
-      } else {
-        alert("Failed to add address.");
-      }
-    });
+    }
   }
 
   const searchInput = document.getElementById("search-input");
@@ -197,6 +200,45 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
+  const dropdownButtons = document.querySelectorAll(".dropdown-btn");
+
+  dropdownButtons.forEach((btn) => {
+    const dropdownList = btn.nextElementSibling; // Get the corresponding dropdown list
+
+    btn.addEventListener("mouseover", function () {
+      positionDropdown(this, dropdownList);
+    });
+
+    btn.addEventListener("mouseleave", function (event) {
+      // Check if mouse moves into the dropdown list
+      if (!dropdownList.contains(event.relatedTarget)) {
+        dropdownList.style.display = "none";
+      }
+    });
+
+    dropdownList.addEventListener("mouseleave", function () {
+      dropdownList.style.display = "none";
+    });
+
+    dropdownList.addEventListener("mouseover", function () {
+      dropdownList.style.display = "flex";
+    });
+  });
+
+  function positionDropdown(button, dropdown) {
+    const rect = button.getBoundingClientRect();
+    dropdown.style.position = "absolute";
+    dropdown.style.top = `${rect.bottom + window.scrollY}px`;
+    dropdown.style.left = `${rect.left + window.scrollX}px`;
+    dropdown.style.width = "auto";
+    dropdown.style.zIndex = "1000";
+    dropdown.style.boxShadow = "0px 4px 8px rgba(0, 0, 0, 0.2)";
+    dropdown.style.borderRadius = "0px";
+    dropdown.style.padding = "20px";
+    dropdown.style.display = "flex";
+    dropdown.style.flexDirection = "column";
+  }
+
   document.querySelectorAll(".btn-reorder").forEach(button => {
     button.addEventListener("click", function () {
       let name = this.getAttribute("data-name");
@@ -295,10 +337,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (data.message.length === 0) {
           let placeOrderElement = document.getElementById("place-order");
-          // No items found, display a message
-          let noItemsMessage = document.createElement('p');
-          noItemsMessage.textContent = "No cart products found.";
-          cartContainer.appendChild(noItemsMessage);
+          let cartElement = document.getElementById("cart-section");
+          let emptyElement = document.getElementById("empty-cart");
+          if (cartElement && emptyElement) {
+            cartElement.style.display = "none";
+            emptyElement.style.display = 'flex';
+          }
+
           if (placeOrderElement) {
             placeOrderElement.style.display = 'none';
           }
@@ -316,6 +361,18 @@ document.addEventListener("DOMContentLoaded", function () {
             let qtyElement = tempContainer.querySelector('.item_qty p');
             if (qtyElement) {
               qtyElement.textContent = item.qty;
+            }
+            let imageElement = tempContainer.querySelector('.item_image');
+            if (imageElement) {
+              imageElement.setAttribute('src', item.image);
+            }
+            let codeElement = tempContainer.querySelector('.item_code p');
+            if (codeElement) {
+              codeElement.textContent = item.item_code;
+            }
+            let priceElement = tempContainer.querySelector('.price p');
+            if (priceElement) {
+              priceElement.textContent = item.amount;
             }
 
             // Update data attributes for update cart button

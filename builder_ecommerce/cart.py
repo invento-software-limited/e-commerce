@@ -73,7 +73,7 @@ def _get_cart_quotation(party=None, contact=None):
 
 
 @frappe.whitelist(allow_guest=True)
-def update_cart(item_code, qty, additional_notes=None, cart_items=[]):
+def update_cart(item_code, qty, additional_notes=None, cart_items=None):
     """
     Update the shopping cart for the guest or logged-in user.
 
@@ -90,6 +90,8 @@ def update_cart(item_code, qty, additional_notes=None, cart_items=[]):
         dict: A dictionary containing the updated cart or quotation name.
     """
 
+    if cart_items is None:
+        cart_items = []
     if frappe.session.user == "Guest":
         """Updates the cart stored in cookies for guest users"""
 
@@ -263,9 +265,23 @@ def get_cart_items(quotation=None):
     Returns:
         list: A list of dictionaries containing item details (name, code, quantity, image) for each cart item.
     """
+
+    default_currency = frappe.db.get_single_value("Global Defaults", "default_currency")
     if not quotation and frappe.session.user != "Guest":
         quotation = _get_cart_quotation()
-        return quotation.get('items')
+        quotation_items = [
+            {
+                "item_name": item.item_name,
+                "item_code": item.item_code,
+                "qty": item.qty,
+                "image": item.image,
+                "rate": frappe.utils.fmt_money(item.rate, currency=default_currency),
+                "amount": frappe.utils.fmt_money(item.amount, currency=default_currency),
+            }
+            for item in quotation.get("items", [])
+        ]
+
+        return quotation_items
 
     elif frappe.session.user == "Guest":
         cart_items = frappe.local.request.args.get('cart_items')
@@ -284,7 +300,9 @@ def get_cart_items(quotation=None):
                 "item_name": item_details.item_name,
                 "item_code": item_details.item_code,
                 "qty": item.get("qty"),
-                "image": item_details.image
+                "image": item_details.image,
+                "rate": frappe.utils.fmt_money(item.get("price", 0), currency=default_currency),
+                "amount": frappe.utils.fmt_money(item.get("price", 0) * item.get('qty', 0), currency=default_currency),
             }
 
             modified_cart_items.append(item_dict)
