@@ -89,6 +89,7 @@ def update_cart(item_code, qty, additional_notes=None, cart_items=[]):
     Returns:
         dict: A dictionary containing the updated cart or quotation name.
     """
+
     if frappe.session.user == "Guest":
         """Updates the cart stored in cookies for guest users"""
 
@@ -96,10 +97,14 @@ def update_cart(item_code, qty, additional_notes=None, cart_items=[]):
 
         existing_item = next((item for item in cart_items if item["item_code"] == item_code), None)
 
+        item_price = frappe.db.get_value("Item Price", {"item_code": item_code, "selling": 1}, "price_list_rate")
         if existing_item:
             existing_item["qty"] += int(qty)
         else:
-            cart_items.append({"item_code": item_code, "qty": int(qty), "notes": additional_notes})
+            cart_items.append(
+                {"item_code": item_code, "qty": int(qty),
+                 "price": flt(item_price),
+                 "notes": additional_notes})
 
         frappe.local.cookie_manager.set_cookie("cart_items", json.dumps(cart_items))
         set_cart_count(cart_items=cart_items)
@@ -210,7 +215,7 @@ def get_party(user=None):
         return customer
 
 
-def set_cart_count(quotation=None, cart_items=[]):
+def set_cart_count(quotation=None, cart_items=None):
     """
     Set the cart item count in cookies for guest users or based on the Quotation for logged-in users.
 
@@ -222,16 +227,24 @@ def set_cart_count(quotation=None, cart_items=[]):
         int: The total item count in the cart.
     """
 
+    if cart_items is None:
+        cart_items = []
     if not quotation and frappe.session.user != "Guest":
         quotation = _get_cart_quotation()
 
     if frappe.session.user == "Guest":
         cart_count = sum(item.get("qty", 0) for item in cart_items)
+        total_amount = sum(flt(item.get("qty", 0)) * flt(item.get("price", 0)) for item in cart_items)
+
     else:
         cart_count = cint(quotation.get("total_qty"))
+        total_amount = flt(quotation.get("grand_total"))
 
+    default_currency = frappe.db.get_single_value("Global Defaults", "default_currency")
+    total_amount = frappe.utils.fmt_money(total_amount, currency=default_currency)
     if hasattr(frappe.local, "cookie_manager"):
         frappe.local.cookie_manager.set_cookie("cart_count", cstr(cart_count))
+        frappe.local.cookie_manager.set_cookie("cart_total", cstr(total_amount))
 
     return cart_count
 

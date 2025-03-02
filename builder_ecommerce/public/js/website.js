@@ -236,7 +236,7 @@ document.addEventListener("DOMContentLoaded", function () {
       let product = page_data.products.find(product => product.item_code === itemCode);
 
       if (product) {
-        if (product.has_variants == 1) {
+        if (product.has_variants === 1) {
           // Fetch attributes from API
           fetch(`/api/method/builder_ecommerce.ecommerce.variant_selector.utils.get_attributes_and_values?item_code=${itemCode}`, {
             method: "GET",
@@ -261,9 +261,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function get_cart_count() {
     const cartCount = frappe.get_cookie("cart_count") || 0;
+    const cartTotal = frappe.get_cookie("cart_total") || 0;
     const cartCountContainer = document.getElementById("cart_count");
+    const cartTotalContainer = document.getElementById("cart_total");
     if (cartCountContainer) {
-      cartCountContainer.innerText = `Cart (${cartCount})`;
+      cartCountContainer.innerText = cartCount;
+    }
+    if (cartTotalContainer) {
+      cartTotalContainer.innerText = cartTotal;
     }
   }
 
