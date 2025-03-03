@@ -137,7 +137,7 @@ def update_cart(item_code, qty, additional_notes=None, cart_items=None):
                 },
             )
         else:
-            quotation_items[0].qty = qty
+            quotation_items[0].qty +=  qty
             quotation_items[0].additional_notes = additional_notes
 
     quotation.flags.ignore_permissions = True
@@ -281,7 +281,8 @@ def get_cart_items(quotation=None):
             for item in quotation.get("items", [])
         ]
 
-        return quotation_items
+        order_details = calculate_taxes_and_totals(quotation=quotation)
+        return quotation_items, order_details
 
     elif frappe.session.user == "Guest":
         cart_items = frappe.local.request.args.get('cart_items')
@@ -294,7 +295,7 @@ def get_cart_items(quotation=None):
         modified_cart_items = []
 
         for item in cart_items:
-            item_details = frappe.get_doc("Item", item.get("item_code"))
+            item_details = frappe.get_cached_doc("Item", item.get("item_code"))
 
             item_dict = {
                 "item_name": item_details.item_name,
@@ -306,8 +307,8 @@ def get_cart_items(quotation=None):
             }
 
             modified_cart_items.append(item_dict)
-
-        return modified_cart_items
+        order_details = calculate_taxes_and_totals(cart_items=cart_items)
+        return modified_cart_items, order_details
 
 
 @frappe.whitelist(allow_guest=True)
@@ -863,3 +864,108 @@ def _apply_shipping_rule(party=None, quotation=None):
     if quotation.shipping_rule:
         quotation.run_method("apply_shipping_rule")
         quotation.run_method("calculate_taxes_and_totals")
+
+
+def calculate_taxes_and_totals(quotation=None, cart_items=None):
+    total_weight = total_price = 0
+    total_excluded_tax = total_included_tax = 0
+    order_summary = []
+    default_currency = frappe.db.get_single_value("Global Defaults", "default_currency")
+    default_tax_template = frappe.get_cached_doc('Sales Taxes and Charges Template', {'is_default': 1})
+    shipping_rule = frappe.get_all(
+        "Shipping Rule",
+        filters={
+            "shipping_rule_type": "Selling",
+            "calculate_based_on": "Net Weight",
+            "disabled": 0
+        },
+        fields=["name"],
+        limit=1
+    )
+
+    if shipping_rule:
+        shipping_rule = frappe.get_cached_doc("Shipping Rule", shipping_rule[0].name)
+
+        if frappe.session.user == "Guest":
+            for condition in shipping_rule.conditions:
+                if condition.from_value <= total_weight <= condition.to_value:
+                    shipping_charge = condition.shipping_amount
+                    total_excluded_tax += shipping_charge
+                    order_summary.append({
+                        "description": shipping_rule.name,
+                        "tax_amount": frappe.utils.fmt_money(shipping_charge, currency=default_currency),
+                        "included_in_price": 0
+                    })
+                    break
+        else:
+            if not quotation:
+                quotation = _get_cart_quotation()
+            quotation.set("taxes", [])
+            quotation.shipping_rule = shipping_rule.name
+            for tax_row in default_tax_template.taxes:
+                tax_row_dict = {
+                    "charge_type": tax_row.charge_type,
+                    "account_head": tax_row.account_head,
+                    "rate": tax_row.rate,
+                    "description": tax_row.description,
+                    "included_in_print_rate": tax_row.included_in_print_rate,
+                    "tax_amount": tax_row.tax_amount,
+                }
+                quotation.append("taxes", tax_row_dict)
+            quotation.run_method("calculate_taxes_and_totals")
+            quotation.run_method("apply_shipping_rule")
+
+            quotation.save(ignore_permissions=True)
+
+            frappe.db.commit()
+
+    if frappe.session.user == "Guest":
+        if not cart_items:
+            cart_items = []
+
+        for item in cart_items:
+            item_code = item.get("item_code")
+            qty = item.get("qty", 1)
+            price = item.get("price", 0)
+
+            weight_per_unit = frappe.db.get_value("Item", item_code, "weight_per_unit") or 0
+            total_weight += flt(weight_per_unit) * qty
+            total_price += flt(price) * qty
+
+        for tax_row in default_tax_template.taxes:
+            if tax_row.charge_type == "On Net Total":
+                tax_rate = flt(tax_row.rate) / 100
+
+                if tax_row.included_in_print_rate:
+                    included_tax = total_price - (total_price / (1 + tax_rate))
+                    total_included_tax += included_tax
+                else:
+                    excluded_tax = total_price * tax_rate
+                    total_excluded_tax += excluded_tax
+
+                order_summary.append({
+                    "description": tax_row.description,
+                    "tax_amount": frappe.utils.fmt_money(
+                        included_tax if tax_row.included_in_print_rate else excluded_tax, currency=default_currency),
+                    "included_in_price": tax_row.included_in_print_rate
+                })
+
+        grand_total = total_price + total_excluded_tax
+    else:
+        if not quotation:
+            quotation = _get_cart_quotation()
+
+        total_price = flt(quotation.get("total"))
+        grand_total = flt(quotation.get("grand_total"))
+        for tax_row in quotation.get('taxes'):
+            order_summary.append({
+                "description": tax_row.description,
+                "tax_amount": frappe.utils.fmt_money(tax_row.base_tax_amount, currency=default_currency),
+                "included_in_price": tax_row.included_in_print_rate
+            })
+
+    return {
+        "total_price": frappe.utils.fmt_money(total_price, currency=default_currency),
+        "grand_total": frappe.utils.fmt_money(grand_total, currency=default_currency),
+        "order_summary": order_summary
+    }

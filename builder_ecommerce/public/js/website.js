@@ -9,7 +9,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   get_cart_count()
   if (window.location.pathname === "/cart") {
-    get_cart_items();
     const placeOrderBtn = document.getElementById("place-order")
     if (placeOrderBtn) {
       placeOrderBtn.addEventListener("submit", async function (event) {
@@ -23,9 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         let payload = {doc: jsonData, cart_items: frappe.get_cookie("cart_items")};
         let response = await fetch("/api/method/builder_ecommerce.cart.place_order", {
-          method: "POST",
-          headers: HEADERS,
-          body: JSON.stringify(payload)
+          method: "POST", headers: HEADERS, body: JSON.stringify(payload)
         });
 
         let result = await response.json();
@@ -37,6 +34,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       });
     }
+    get_cart_items();
   }
 
   const searchInput = document.getElementById("search-input");
@@ -72,9 +70,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       productSearch.innerHTML = ""; // Clear previous results
 
-      let filteredProducts = page_data.products.filter(product =>
-        product.item_name.toLowerCase().includes(searchTerm)
-      );
+      let filteredProducts = page_data.products.filter(product => product.item_name.toLowerCase().includes(searchTerm));
 
       filteredProducts.forEach(product => {
         let tempContainer = document.createElement("div");
@@ -183,9 +179,7 @@ document.addEventListener("DOMContentLoaded", function () {
       let name = this.getAttribute("data-name");
       if (!name) return;
       fetch('/api/method/builder_ecommerce.ecommerce.order.order.cancel_order', {
-        method: "POST",
-        headers: HEADERS,
-        body: JSON.stringify({order_id: name})
+        method: "POST", headers: HEADERS, body: JSON.stringify({order_id: name})
       })
         .then(response => response.json())
         .then(data => {
@@ -244,20 +238,13 @@ document.addEventListener("DOMContentLoaded", function () {
       let name = this.getAttribute("data-name");
       if (!name) return;
       fetch('/api/method/builder_ecommerce.ecommerce.order.order.reorder', {
-        method: "POST",
-        headers: HEADERS,
-        body: JSON.stringify({order_id: name})
+        method: "POST", headers: HEADERS, body: JSON.stringify({order_id: name})
       })
         .then(response => response.json())
         .then(data => {
           if (data.message) {
             Toastify({
-              text: data.message.message,
-              close: true,
-              gravity: "top",
-              position: "center",
-              stopOnFocus: true,
-              style: {
+              text: data.message.message, close: true, gravity: "top", position: "center", stopOnFocus: true, style: {
                 background: "linear-gradient(to right, #00b09b, #96c93d)",
               }
             }).showToast();
@@ -281,8 +268,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (product.has_variants === 1) {
           // Fetch attributes from API
           fetch(`/api/method/builder_ecommerce.ecommerce.variant_selector.utils.get_attributes_and_values?item_code=${itemCode}`, {
-            method: "GET",
-            headers: HEADERS,
+            method: "GET", headers: HEADERS,
           })
             .then(response => response.json())
             .then(data => {
@@ -316,11 +302,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
   function get_cart_items() {
-    const cartItems = frappe.get_cookie("cart_items") || "[]";  // Default to empty array if undefined
+    const cartItems = frappe.get_cookie("cart_items") || "[]";
 
     fetch(`/api/method/builder_ecommerce.cart.get_cart_items?cart_items=${cartItems}`, {
-      method: "GET",
-      headers: HEADERS
+      method: "GET", headers: HEADERS
     })
       .then(response => {
         if (!response.ok) {
@@ -331,11 +316,12 @@ document.addEventListener("DOMContentLoaded", function () {
         return response.json();
       })
       .then(data => {
+        const [cartItems, orderDetails] = data.message;
         let cartContainer = document.querySelector('#cart-container');
         let originalContent = cartContainer.innerHTML;
         cartContainer.innerHTML = '';  // Clear original content
 
-        if (data.message.length === 0) {
+        if (cartItems.length === 0) {
           let placeOrderElement = document.getElementById("place-order");
           let cartElement = document.getElementById("cart-section");
           let emptyElement = document.getElementById("empty-cart");
@@ -349,7 +335,7 @@ document.addEventListener("DOMContentLoaded", function () {
           }
         } else {
           // Process and display cart items
-          data.message.forEach(item => {
+          cartItems.forEach(item => {
             let tempContainer = document.createElement('div');
             tempContainer.innerHTML = originalContent;
 
@@ -392,6 +378,43 @@ document.addEventListener("DOMContentLoaded", function () {
             cartContainer.appendChild(tempContainer);
           });
         }
+        let subTotalItem = document.getElementById('sub_total');
+        if (subTotalItem) {
+          subTotalItem.innerHTML = orderDetails.total_price;
+        }
+        let grandTotalItem = document.getElementById('grand_total');
+        if (grandTotalItem) {
+          grandTotalItem.innerHTML = orderDetails.grand_total;
+        }
+        const taxContainerParent = document.getElementById('tax_container')
+        if (taxContainerParent) {
+          const taxOriginalContent = taxContainerParent.innerHTML
+          taxContainerParent.innerHTML = ''
+          orderDetails.order_summary.forEach(summary => {
+
+            let tempTaxContainer = document.createElement('div');
+            tempTaxContainer.innerHTML = taxOriginalContent;
+
+            let nameElement = tempTaxContainer.querySelector('.tax_name p');
+            if (nameElement) {
+              let description = ''
+              if (summary.included_in_price === 1) {
+                description = `${summary.description}(Inc)`
+              } else {
+                description = summary.description
+              }
+              nameElement.innerHTML = description
+            }
+
+
+            let amountElement = tempTaxContainer.querySelector('.tax_amount p');
+            if (amountElement) {
+              amountElement.innerHTML = summary.tax_amount
+            }
+
+            taxContainerParent.appendChild(tempTaxContainer);
+          })
+        }
       })
       .catch(error => {
         alert("Error adding item: " + (error.message || "Unknown error"));
@@ -401,13 +424,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function update_cart_qty(item_code, qty, action) {
     fetch('/api/method/builder_ecommerce.cart.update_cart_qty', {
-      method: "POST",
-      headers: HEADERS,
-      body: JSON.stringify({
-        item_code: item_code,
-        qty: qty,
-        action: action,
-        cart_items: frappe.get_cookie("cart_items")
+      method: "POST", headers: HEADERS, body: JSON.stringify({
+        item_code: item_code, qty: qty, action: action, cart_items: frappe.get_cookie("cart_items") || "[]"
       })
     })
       .then(response => {
@@ -433,17 +451,14 @@ frappe.get_cookie = function getCookie(name) {
 };
 
 frappe.get_cookies = function getCookies() {
-  var c = document.cookie,
-    v = 0,
-    cookies = {};
+  var c = document.cookie, v = 0, cookies = {};
   if (document.cookie.match(/^\s*\$Version=(?:"1"|1);\s*(.*)/)) {
     c = RegExp.$1;
     v = 1;
   }
   if (v === 0) {
     c.split(/[,;]/).map(function (cookie) {
-      var parts = cookie.split(/=/, 2),
-        name = decodeURIComponent(parts[0].trimLeft()),
+      var parts = cookie.split(/=/, 2), name = decodeURIComponent(parts[0].trimLeft()),
         value = parts.length > 1 ? decodeURIComponent(parts[1].trimRight()) : null;
       if (value && value.charAt(0) === '"') {
         value = value.substr(1, value.length - 2);
@@ -451,11 +466,8 @@ frappe.get_cookies = function getCookies() {
       cookies[name] = value;
     });
   } else {
-    c.match(
-      /(?:^|\s+)([!#$%&'*+\-.0-9A-Z^`a-z|~]+)=([!#$%&'*+\-.0-9A-Z^`a-z|~]*|"(?:[\x20-\x7E\x80\xFF]|\\[\x00-\x7F])*")(?=\s*[,;]|$)/g
-    ).map(function ($0, $1) {
-      var name = $0,
-        value = $1.charAt(0) === '"' ? $1.substr(1, -1).replace(/\\(.)/g, "$1") : $1;
+    c.match(/(?:^|\s+)([!#$%&'*+\-.0-9A-Z^`a-z|~]+)=([!#$%&'*+\-.0-9A-Z^`a-z|~]*|"(?:[\x20-\x7E\x80\xFF]|\\[\x00-\x7F])*")(?=\s*[,;]|$)/g).map(function ($0, $1) {
+      var name = $0, value = $1.charAt(0) === '"' ? $1.substr(1, -1).replace(/\\(.)/g, "$1") : $1;
       cookies[name] = value;
     });
   }
