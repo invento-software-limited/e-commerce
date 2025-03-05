@@ -444,7 +444,67 @@ document.addEventListener("DOMContentLoaded", function () {
       });
   }
 
+  document.getElementById("newsletter_subscribe").addEventListener("submit", async function (event) {
+    event.preventDefault(); // Prevent default form submission
+
+    const formData = new FormData(this);
+    const formObject = Object.fromEntries(formData.entries()); // Convert FormData to a plain object
+
+    try {
+      const response = await fetch("/api/method/frappe.email.doctype.newsletter.newsletter.subscribe", {
+        method: "POST",
+        headers: HEADERS,
+        body: JSON.stringify(formObject)
+      });
+
+      const data = await response.json();
+
+      if (data.message) {
+        Toastify({
+          text: "Subscribed successfully!",
+          close: true,
+          gravity: "top",
+          position: "center",
+          stopOnFocus: true,
+          style: {
+            background: "linear-gradient(to right, #00b09b, #96c93d)",
+          }
+        }).showToast();
+      } else {
+        throw new Error(data.exc || "Subscription failed! Please try again.");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+
+      let errorMessage = "An error occurred. Please try again.";
+
+      // Try to extract error message from the response
+      if (error.response) {
+        try {
+          const errorData = await error.response.json();
+          if (errorData._server_messages) {
+            const serverMessages = JSON.parse(errorData._server_messages);
+            errorMessage = serverMessages.map(msg => JSON.parse(msg).message).join(" ");
+          }
+        } catch (parseError) {
+          console.error("Error parsing response:", parseError);
+        }
+      }
+
+      Toastify({
+        text: errorMessage,
+        close: true,
+        gravity: "top",
+        position: "center",
+        stopOnFocus: true,
+        style: {
+          background: "linear-gradient(to right, #ff416c, #ff4b2b)",
+        }
+      }).showToast();
+    }
+  });
 });
+
 
 frappe.get_cookie = function getCookie(name) {
   return frappe.get_cookies()[name];
