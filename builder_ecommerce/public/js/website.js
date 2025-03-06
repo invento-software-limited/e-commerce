@@ -503,6 +503,39 @@ document.addEventListener("DOMContentLoaded", function () {
       }).showToast();
     }
   });
+
+  document.querySelectorAll('.collapse-btn').forEach(button => {
+    button.addEventListener('click', function () {
+      const categoryId = this.getAttribute('data-category_id');
+      const targetDiv = document.getElementById(categoryId);
+      const extendButton = this.parentElement.querySelector('.extend-btn'); // Find extend-btn within the same parent
+
+      if (targetDiv) {
+        targetDiv.style.display = 'none';
+
+        if (extendButton) {
+          extendButton.style.display = 'flex';
+          this.style.display = 'none'
+        }
+      }
+    });
+  });
+  document.querySelectorAll('.extend-btn').forEach(button => {
+    button.addEventListener('click', function () {
+      const categoryId = this.getAttribute('data-category_id');
+      const targetDiv = document.getElementById(categoryId);
+      const collapseButton = this.parentElement.querySelector('.collapse-btn');
+
+      if (targetDiv) {
+        targetDiv.style.display = 'flex';
+        if (collapseButton) {
+          collapseButton.style.display = 'flex';
+          this.style.display = 'none';
+        }
+      }
+    });
+  });
+
 });
 
 
