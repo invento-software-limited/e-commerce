@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   get_cart_count()
-  if (window.location.pathname === "/cart") {
+  if (window.location.pathname === "/cart" || window.location.pathname === "/checkout") {
     const placeOrderBtn = document.getElementById("place-order")
     if (placeOrderBtn) {
       placeOrderBtn.addEventListener("submit", async function (event) {
@@ -30,7 +30,18 @@ document.addEventListener("DOMContentLoaded", function () {
           alert("Address added successfully!");
           location.reload();
         } else {
-          alert("Failed to add address.");
+          let message_obj = JSON.parse(result._server_messages)
+          let message = JSON.parse(message_obj)
+          Toastify({
+            text: `${message.message}`,
+            close: true,
+            gravity: "top",
+            position: "center",
+            stopOnFocus: true,
+            style: {
+              background: "linear-gradient(to right, #00b09b, #96c93d)",
+            }
+          }).showToast();
         }
       });
     }
@@ -361,6 +372,11 @@ document.addEventListener("DOMContentLoaded", function () {
               priceElement.textContent = item.amount;
             }
 
+            let rateElement = tempContainer.querySelector('.rate p');
+            if (rateElement) {
+              rateElement.textContent = item.rate;
+            }
+
             // Update data attributes for update cart button
             let updateElements = tempContainer.querySelectorAll('.update_cart_qty');
             updateElements.forEach(updateElement => {
@@ -378,42 +394,44 @@ document.addEventListener("DOMContentLoaded", function () {
             cartContainer.appendChild(tempContainer);
           });
         }
-        let subTotalItem = document.getElementById('sub_total');
-        if (subTotalItem) {
-          subTotalItem.innerHTML = orderDetails.total_price;
-        }
-        let grandTotalItem = document.getElementById('grand_total');
-        if (grandTotalItem) {
-          grandTotalItem.innerHTML = orderDetails.grand_total;
-        }
-        const taxContainerParent = document.getElementById('tax_container')
-        if (taxContainerParent) {
-          const taxOriginalContent = taxContainerParent.innerHTML
-          taxContainerParent.innerHTML = ''
-          orderDetails.order_summary.forEach(summary => {
+        if (orderDetails) {
+          let subTotalItem = document.getElementById('sub_total');
+          if (subTotalItem) {
+            subTotalItem.innerHTML = orderDetails.total_price;
+          }
+          let grandTotalItem = document.getElementById('grand_total');
+          if (grandTotalItem) {
+            grandTotalItem.innerHTML = orderDetails.grand_total;
+          }
+          const taxContainerParent = document.getElementById('tax_container')
+          if (taxContainerParent) {
+            const taxOriginalContent = taxContainerParent.innerHTML
+            taxContainerParent.innerHTML = ''
+            orderDetails.order_summary.forEach(summary => {
 
-            let tempTaxContainer = document.createElement('div');
-            tempTaxContainer.innerHTML = taxOriginalContent;
+              let tempTaxContainer = document.createElement('div');
+              tempTaxContainer.innerHTML = taxOriginalContent;
 
-            let nameElement = tempTaxContainer.querySelector('.tax_name p');
-            if (nameElement) {
-              let description = ''
-              if (summary.included_in_price === 1) {
-                description = `${summary.description}(Inc)`
-              } else {
-                description = summary.description
+              let nameElement = tempTaxContainer.querySelector('.tax_name p');
+              if (nameElement) {
+                let description = ''
+                if (summary.included_in_price === 1) {
+                  description = `${summary.description}(Inc)`
+                } else {
+                  description = summary.description
+                }
+                nameElement.innerHTML = description
               }
-              nameElement.innerHTML = description
-            }
 
 
-            let amountElement = tempTaxContainer.querySelector('.tax_amount p');
-            if (amountElement) {
-              amountElement.innerHTML = summary.tax_amount
-            }
+              let amountElement = tempTaxContainer.querySelector('.tax_amount p');
+              if (amountElement) {
+                amountElement.innerHTML = summary.tax_amount
+              }
 
-            taxContainerParent.appendChild(tempTaxContainer);
-          })
+              taxContainerParent.appendChild(tempTaxContainer);
+            })
+          }
         }
       })
       .catch(error => {

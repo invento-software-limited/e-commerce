@@ -137,7 +137,7 @@ def update_cart(item_code, qty, additional_notes=None, cart_items=None):
                 },
             )
         else:
-            quotation_items[0].qty +=  qty
+            quotation_items[0].qty += qty
             quotation_items[0].additional_notes = additional_notes
 
     quotation.flags.ignore_permissions = True
@@ -267,8 +267,9 @@ def get_cart_items(quotation=None):
     """
 
     default_currency = frappe.db.get_single_value("Global Defaults", "default_currency")
-    if not quotation and frappe.session.user != "Guest":
-        quotation = _get_cart_quotation()
+    if frappe.session.user != "Guest":
+        if not quotation:
+            quotation = _get_cart_quotation()
         quotation_items = [
             {
                 "item_name": item.item_name,
@@ -281,7 +282,7 @@ def get_cart_items(quotation=None):
             for item in quotation.get("items", [])
         ]
 
-        order_details = calculate_taxes_and_totals(quotation=quotation)
+        order_details = calculate_taxes_and_totals(quotation=quotation) if len(quotation.get("items")) > 0 else None
         return quotation_items, order_details
 
     elif frappe.session.user == "Guest":
