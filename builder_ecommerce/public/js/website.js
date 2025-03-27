@@ -27,8 +27,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
         let result = await response.json();
         if (result.message) {
-          alert("Address added successfully!");
-          location.reload();
+          Toastify({
+            text: "Order placed successfully!",
+            close: true,
+            gravity: "top",
+            position: "center",
+            stopOnFocus: true,
+            style: {
+              background: "linear-gradient(to right, #00b09b, #96c93d)",
+            }
+          }).showToast();
+          window.location.href = "/profile"
         } else {
           let message_obj = JSON.parse(result._server_messages)
           let message = JSON.parse(message_obj)
