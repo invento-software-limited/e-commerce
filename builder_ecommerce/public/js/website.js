@@ -141,7 +141,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     let modal = document.getElementById("variantModal");
-    modal.style.display = "block";
+    modal.style.display = "flex";
 
     document.getElementById("closeModal").onclick = function () {
       modal.style.display = "none";
@@ -562,7 +562,125 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   });
+  const modal = document.getElementById("variantModal");
+  const closeModal = document.getElementById("closeModal");
+  const modalBody = document.getElementById("variantModalBody");
 
+  let currentAddressSection = null;
+  let currentDataName = null;
+
+  // Function to create input field with label
+  function createInputField(labelText, id, value) {
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("select-container");
+
+    const label = document.createElement("label");
+    label.textContent = labelText;
+    label.setAttribute("for", id);
+
+    const input = document.createElement("input");
+    input.setAttribute("type", "text");
+    input.setAttribute("id", id);
+    input.value = value || "";
+
+    wrapper.appendChild(label);
+    wrapper.appendChild(input);
+    return wrapper;
+  }
+
+  // Inject inputs into modal
+  function populateModalForm(addressLine1, city, country, pincode, phone) {
+    modalBody.innerHTML = ""; // Clear previous content
+
+    modalBody.appendChild(createInputField("Address Line 1", "modalAddressLine1", addressLine1));
+    modalBody.appendChild(createInputField("City", "modalCity", city));
+    modalBody.appendChild(createInputField("Country", "modalCountry", country));
+    modalBody.appendChild(createInputField("Pincode", "modalPincode", pincode));
+    modalBody.appendChild(createInputField("Phone", "modalPhone", phone));
+  }
+
+  // Edit button logic
+  document.querySelectorAll('.address_edit').forEach(button => {
+    button.addEventListener('click', function () {
+      const section = this.closest('section');
+      currentAddressSection = section;
+      currentDataName = this.getAttribute('data-name');
+
+      const addressLine1 = section.querySelector('.address_line1')?.innerText.trim();
+      const city = section.querySelector('.city')?.innerText.trim();
+      const country = section.querySelector('.country')?.innerText.trim();
+      const pincode = section.querySelector('.pincode')?.innerText.trim();
+      const phone = section.querySelector('.phone')?.innerText.trim();
+
+      populateModalForm(addressLine1, city, country, pincode, phone);
+      modal.style.display = "flex";
+    });
+  });
+
+  // Close modal
+  closeModal.addEventListener('click', () => {
+    modal.style.display = "none";
+  });
+
+  // Confirm and update values
+  document.getElementById("confirmVariantSelection").addEventListener("click", () => {
+    if (!currentAddressSection) return;
+
+    const data = {
+      address_line1: document.getElementById('modalAddressLine1').value,
+      city: document.getElementById('modalCity').value,
+      country: document.getElementById('modalCountry').value,
+      pincode: document.getElementById('modalPincode').value,
+      phone: document.getElementById('modalPhone').value,
+      doctype: "Address",
+      address_type: 'Billing',
+      web_form_name: 'addresses',
+      name: currentDataName
+    };
+
+    const payload = {
+      data: JSON.stringify(data),
+      web_form: "addresses",
+      for_payment: false,
+      cmd: "frappe.website.doctype.web_form.web_form.accept"
+    };
+
+    const csrfToken = frappe.csrf_token || '';
+
+    fetch('/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-frappe-cmd': 'frappe.website.doctype.web_form.web_form.accept',
+        'x-frappe-csrf-token': csrfToken,
+        'x-requested-with': 'XMLHttpRequest',
+        'Accept': 'application/json, text/javascript, */*; q=0.01',
+      },
+      body: JSON.stringify(payload)
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Success:', data);
+        location.reload();
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+
+    modal.style.display = "none";
+  });
+  const createForm = document.getElementById("address_create_form");
+
+  document.getElementById("addNewAddressBtn").addEventListener("click", () => {
+    modalBody.innerHTML = "";
+
+    const formClone = createForm.cloneNode(true);
+    formClone.style.display = "block";
+    formClone.removeAttribute("id");
+    modalBody.appendChild(formClone);
+
+    modal.style.display = "flex";
+  });
 });
 
 

@@ -1,44 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<base href="{{ base_url }}">
-	<meta charset="UTF-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	{% if disable_indexing %}
-	<meta name="robots" content="noindex, nofollow">
-	{% endif %}
-	<title>{{title}}</title>
-	<link rel="icon" href="{{ favicon_light or favicon or '/assets/builder/images/frappe_black.png' }}"  media="(prefers-color-scheme: light)"/>
-	<link rel="icon" href="{{ favicon_dark or favicon or '/assets/builder/images/frappe_white.png' }}"  media="(prefers-color-scheme: dark)"/>
-	{% block meta_block %}{% include "templates/includes/meta_block.html" %}{% endblock %}
-	<link rel="stylesheet" href="/assets/builder/reset.css?v=1" media="screen">
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	{% for (font, options) in fonts.items() %}<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family={{ font }}:wght@{{ ";".join(options.weights) }}&display=swap" media="screen">{% endfor %}
-	{{ style }}
-	{%- if custom_fonts -%}
-	<style>{% for font in custom_fonts %}@font-face {font-family: "{{ font.font_name }}";src: url("{{ font.font_file }}");}{% endfor %}</style>
-	{%- endif -%}
-	{% block style %}
-		{%- if styles -%}
-			{% for style_path in styles %}
-			<link rel="stylesheet" href="{{ style_path }}">
-			{% endfor %}
-		{%- endif -%}
-	{%- endblock %}
+  <base href="{{ base_url }}">
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% if disable_indexing %}
+  <meta name="robots" content="noindex, nofollow">
+  {% endif %}
+  <title>{{title}}</title>
+  <link rel="icon" href="{{ favicon_light or favicon or '/assets/builder/images/frappe_black.png' }}"
+        media="(prefers-color-scheme: light)"/>
+  <link rel="icon" href="{{ favicon_dark or favicon or '/assets/builder/images/frappe_white.png' }}"
+        media="(prefers-color-scheme: dark)"/>
+  {% block meta_block %}{% include "templates/includes/meta_block.html" %}{% endblock %}
+  <link rel="stylesheet" href="/assets/builder/reset.css?v=1" media="screen">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  {% for (font, options) in fonts.items() %}
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family={{ font }}:wght@{{ " ;
+  ".join(options.weights) }}&display=swap" media="screen">{% endfor %}
+  {{ style }}
+  {%- if custom_fonts -%}
+  <style>{
+  %
+  for
+  font
+  in
+  custom_fonts
+  %
+  }
+  @font-face {
+    font-family: "{{ font.font_name }}";
+    src: url("{{ font.font_file }}");
+  }
+
+  {
+  %
+  endfor
+  %
+  }</style>
+  {%- endif -%}
+  {% block style %}
+  {%- if styles -%}
+  {% for style_path in styles %}
+  <link rel="stylesheet" href="{{ style_path }}">
+  {% endfor %}
+  {%- endif -%}
+  {%- endblock %}
   <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
-	<style>
-		/* Modal background */
+  <style>
+    /* Modal background */
     .custom-modal {
       display: none;
       position: fixed;
       z-index: 1;
       left: 0;
       top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
       background-color: rgba(0, 0, 0, 0.4);
+      align-items: center;
+      justify-content: center;
     }
 
     /* Modal content */
@@ -49,6 +72,8 @@
       border: 1px solid #888;
       width: 80%;
       max-width: 500px;
+      height: 80%;
+      overflow: auto;
     }
 
     /* Close button */
@@ -86,25 +111,51 @@
     .btn:hover {
       background-color: #45a049;
     }
-	</style>
+
+    .select-container {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 16px;
+    }
+
+    .select-container label {
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: #333;
+    }
+
+    .select-container input {
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      transition: border-color 0.2s ease;
+    }
+
+    .select-container input:focus {
+      outline: none;
+      border-color: #4f46e5; /* Indigo color on focus */
+      box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+    }
+  </style>
 </head>
 {% block page_content %}
 {{ content }}
 <!-- Custom Modal for Variant Selection -->
 <div id="variantModal" class="custom-modal">
-	<div class="custom-modal-content">
-	  <div class="custom-modal-header">
-		<span id="closeModal" class="close">&times;</span>
-		<h2>Select Product Variants</h2>
-	  </div>
-	  <div class="custom-modal-body" id="variantModalBody">
-		<!-- Select fields will be injected here -->
-	  </div>
-	  <div class="custom-modal-footer">
-		<button id="confirmVariantSelection" class="btn">Confirm</button>
-	  </div>
-	</div>
+  <div class="custom-modal-content">
+    <div class="custom-modal-header">
+      <span id="closeModal" class="close">&times;</span>
+      <!--		<h2>Select Product Variants</h2>-->
+    </div>
+    <div class="custom-modal-body" id="variantModalBody">
+      <!-- Select fields will be injected here -->
+    </div>
+    <div class="custom-modal-footer">
+      <button id="confirmVariantSelection" class="btn">Confirm</button>
+    </div>
   </div>
+</div>
 
 {% endblock %}
 <script src="/assets/builder_ecommerce/js/website.js"></script>
