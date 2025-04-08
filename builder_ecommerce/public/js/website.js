@@ -204,9 +204,29 @@ document.addEventListener("DOMContentLoaded", function () {
         .then(response => response.json())
         .then(data => {
           if (data.message) {
-            alert(data.message.message);
+            Toastify({
+              text: data.message.message,
+              close: true,
+              destination: "/cart",
+              gravity: "top",
+              position: "center",
+              stopOnFocus: true,
+              style: {
+                background: "linear-gradient(to right, #00b09b, #96c93d)",
+              }
+            }).showToast();
           } else {
-            alert("No message returned from the server.");
+            Toastify({
+              text: "No message returned from the server.",
+              close: true,
+              destination: "/cart",
+              gravity: "top",
+              position: "center",
+              stopOnFocus: true,
+              style: {
+                background: "linear-gradient(to right, #00b09b, #96c93d)",
+              }
+            }).showToast();
           }
         })
         .catch(error => console.error("Error fetching attributes:", error));
@@ -269,7 +289,16 @@ document.addEventListener("DOMContentLoaded", function () {
               }
             }).showToast();
           } else {
-            alert("No message returned from the server.");
+            Toastify({
+              text: "No message returned from the server.",
+              close: true,
+              gravity: "top",
+              position: "center",
+              stopOnFocus: true,
+              style: {
+                background: "linear-gradient(to right, #00b09b, #96c93d)",
+              }
+            }).showToast();
           }
         })
         .catch(error => console.error("Error fetching attributes:", error));
@@ -444,7 +473,16 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       })
       .catch(error => {
-        alert("Error adding item: " + (error.message || "Unknown error"));
+        Toastify({
+          text: `Error adding item: ${(error.message || "Unknown error")}`,
+          close: true,
+          gravity: "top",
+          position: "center",
+          stopOnFocus: true,
+          style: {
+            background: "linear-gradient(to right, #00b09b, #96c93d)",
+          }
+        }).showToast();
       });
   }
 
@@ -467,28 +505,8 @@ document.addEventListener("DOMContentLoaded", function () {
         window.location.reload();
       })
       .catch(error => {
-        alert("Error adding item: " + (error.message || "Unknown error"));  // Error message
-      });
-  }
-
-  document.getElementById("newsletter_subscribe").addEventListener("submit", async function (event) {
-    event.preventDefault(); // Prevent default form submission
-
-    const formData = new FormData(this);
-    const formObject = Object.fromEntries(formData.entries()); // Convert FormData to a plain object
-
-    try {
-      const response = await fetch("/api/method/frappe.email.doctype.newsletter.newsletter.subscribe", {
-        method: "POST",
-        headers: HEADERS,
-        body: JSON.stringify(formObject)
-      });
-
-      const data = await response.json();
-
-      if (data.message) {
         Toastify({
-          text: "Subscribed successfully!",
+          text: `Error adding item: ${(error.message || "Unknown error")}`,
           close: true,
           gravity: "top",
           position: "center",
@@ -497,39 +515,72 @@ document.addEventListener("DOMContentLoaded", function () {
             background: "linear-gradient(to right, #00b09b, #96c93d)",
           }
         }).showToast();
-      } else {
-        throw new Error(data.exc || "Subscription failed! Please try again.");
-      }
-    } catch (error) {
-      console.error("Error:", error);
+      });
+  }
 
-      let errorMessage = "An error occurred. Please try again.";
+  const newsletterForm = document.getElementById("newsletter_subscribe");
 
-      // Try to extract error message from the response
-      if (error.response) {
-        try {
-          const errorData = await error.response.json();
-          if (errorData._server_messages) {
-            const serverMessages = JSON.parse(errorData._server_messages);
-            errorMessage = serverMessages.map(msg => JSON.parse(msg).message).join(" ");
+  if (newsletterForm) {
+    newsletterForm.addEventListener("submit", async function (event) {
+      event.preventDefault(); // Prevent default form submission
+
+      const formData = new FormData(this);
+      const formObject = Object.fromEntries(formData.entries()); // Convert FormData to a plain object
+
+      try {
+        const response = await fetch("/api/method/frappe.email.doctype.newsletter.newsletter.subscribe", {
+          method: "POST",
+          headers: HEADERS,
+          body: JSON.stringify(formObject)
+        });
+
+        const data = await response.json();
+
+        if (data.message) {
+          Toastify({
+            text: "Subscribed successfully!",
+            close: true,
+            gravity: "top",
+            position: "center",
+            stopOnFocus: true,
+            style: {
+              background: "linear-gradient(to right, #00b09b, #96c93d)",
+            }
+          }).showToast();
+        } else {
+          throw new Error(data.exc || "Subscription failed! Please try again.");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+
+        let errorMessage = "An error occurred. Please try again.";
+
+        // Try to extract error message from the response
+        if (error.response) {
+          try {
+            const errorData = await error.response.json();
+            if (errorData._server_messages) {
+              const serverMessages = JSON.parse(errorData._server_messages);
+              errorMessage = serverMessages.map(msg => JSON.parse(msg).message).join(" ");
+            }
+          } catch (parseError) {
+            console.error("Error parsing response:", parseError);
           }
-        } catch (parseError) {
-          console.error("Error parsing response:", parseError);
         }
-      }
 
-      Toastify({
-        text: errorMessage,
-        close: true,
-        gravity: "top",
-        position: "center",
-        stopOnFocus: true,
-        style: {
-          background: "linear-gradient(to right, #ff416c, #ff4b2b)",
-        }
-      }).showToast();
-    }
-  });
+        Toastify({
+          text: errorMessage,
+          close: true,
+          gravity: "top",
+          position: "center",
+          stopOnFocus: true,
+          style: {
+            background: "linear-gradient(to right, #ff416c, #ff4b2b)",
+          }
+        }).showToast();
+      }
+    });
+  }
 
   document.querySelectorAll('.collapse-btn').forEach(button => {
     button.addEventListener('click', function () {
@@ -562,82 +613,167 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   });
-  const modal = document.getElementById("variantModal");
-  const closeModal = document.getElementById("closeModal");
-  const modalBody = document.getElementById("variantModalBody");
 
-  let currentAddressSection = null;
-  let currentDataName = null;
+  const addressCreateBtn = document.getElementById("address_create_btn");
 
-  // Function to create input field with label
-  function createInputField(labelText, id, value) {
-    const wrapper = document.createElement("div");
-    wrapper.classList.add("select-container");
+  if (addressCreateBtn) {
+    addressCreateBtn.addEventListener("click", () => {
+      const createForm = document.getElementById("address_create_form");
 
-    const label = document.createElement("label");
-    label.textContent = labelText;
-    label.setAttribute("for", id);
+      if (createForm) {
+        const formData = new FormData(createForm);
 
-    const input = document.createElement("input");
-    input.setAttribute("type", "text");
-    input.setAttribute("id", id);
-    input.value = value || "";
+        const data = {
+          name: formData.get('name'),
+          address_line1: formData.get('address_line1'),
+          address_line2: formData.get('address_line2'),
+          city: formData.get('city'),
+          country: formData.get('country'),
+          pincode: formData.get('pincode'),
+          phone: formData.get('phone'),
+          state: formData.get('state'),
+          address_title: `${frappe.get_cookie('full_name')}-Address`,
+          doctype: "Address",
+          address_type: formData.get('address_type'),
+          web_form_name: 'addresses'
+        };
 
-    wrapper.appendChild(label);
-    wrapper.appendChild(input);
-    return wrapper;
+        addressCreateUpdate(data);
+      }
+    });
   }
 
-  // Inject inputs into modal
-  function populateModalForm(addressLine1, city, country, pincode, phone) {
-    modalBody.innerHTML = ""; // Clear previous content
 
-    modalBody.appendChild(createInputField("Address Line 1", "modalAddressLine1", addressLine1));
-    modalBody.appendChild(createInputField("City", "modalCity", city));
-    modalBody.appendChild(createInputField("Country", "modalCountry", country));
-    modalBody.appendChild(createInputField("Pincode", "modalPincode", pincode));
-    modalBody.appendChild(createInputField("Phone", "modalPhone", phone));
-  }
-
-  // Edit button logic
   document.querySelectorAll('.address_edit').forEach(button => {
-    button.addEventListener('click', function () {
-      const section = this.closest('section');
-      currentAddressSection = section;
-      currentDataName = this.getAttribute('data-name');
+    button.addEventListener('click', (e) => {
+      document.getElementById('tab-3').style.display = 'none';
+      const form = document.getElementById('address_create_form');
+      form.style.display = 'block';
+      const addressContainer = button.closest('section');
 
-      const addressLine1 = section.querySelector('.address_line1')?.innerText.trim();
-      const city = section.querySelector('.city')?.innerText.trim();
-      const country = section.querySelector('.country')?.innerText.trim();
-      const pincode = section.querySelector('.pincode')?.innerText.trim();
-      const phone = section.querySelector('.phone')?.innerText.trim();
+      const address_line1 = addressContainer.querySelector('.address_line1')?.textContent.trim();
+      const address_line2 = addressContainer.querySelector('.address_line2')?.textContent.trim();
+      const city = addressContainer.querySelector('.city')?.textContent.trim();
+      const state = addressContainer.querySelector('.state')?.textContent.trim();
+      const country = addressContainer.querySelector('.country')?.textContent.trim();
+      const pincode = addressContainer.querySelector('.pincode')?.textContent.trim();
+      const phone = addressContainer.querySelector('.phone')?.textContent.trim();
 
-      populateModalForm(addressLine1, city, country, pincode, phone);
-      modal.style.display = "flex";
+      form.querySelector('textarea[name="address_line1"]').value = address_line1 || '';
+      form.querySelector('textarea[name="address_line2"]').value = address_line2 || '';
+      form.querySelector('input[name="city"]').value = city || '';
+      form.querySelector('input[name="state"]').value = state || '';
+      form.querySelector('select[name="country"]').value = country || '';
+      form.querySelector('input[name="pincode"]').value = pincode || '';
+      form.querySelector('input[name="phone"]').value = phone || '';
+
+
+      const dataName = button.getAttribute('data-name');
+      form.querySelector('select[name="address_type"]').value = dataName.includes('Shipping') ? 'Shipping' : 'Billing';
+      let hiddenInput = form.querySelector('input[name="name"]');
+      if (!hiddenInput) {
+        hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'name';
+        form.appendChild(hiddenInput);
+      }
+      hiddenInput.value = dataName;
     });
   });
 
-  // Close modal
-  closeModal.addEventListener('click', () => {
-    modal.style.display = "none";
+
+  const addNewAddressBtn = document.getElementById("addNewAddressBtn");
+  const addressCreateCancel = document.getElementById("address_create_cancel");
+  const addressCreateForm = document.getElementById("address_create_form");
+  const tab3 = document.getElementById("tab-3");
+
+  if (addNewAddressBtn) {
+    addNewAddressBtn.addEventListener("click", () => {
+      if (tab3) {
+        tab3.style.display = 'none';
+      }
+      if (addressCreateForm) {
+        addressCreateForm.style.display = 'flex';
+      }
+    });
+  }
+
+  if (addressCreateCancel) {
+    addressCreateCancel.addEventListener("click", () => {
+      if (addressCreateForm) {
+        addressCreateForm.style.display = 'none';
+      }
+      if (tab3) {
+        tab3.style.display = 'block';
+      }
+    });
+  }
+
+
+  document.querySelectorAll('.delete-address').forEach(button => {
+    button.addEventListener('click', async (e) => {
+      e.preventDefault();
+
+      const dataName = button.getAttribute('data-name');
+
+      // Optional: Confirm before delete
+      const confirmDelete = confirm(`Are you sure you want to delete address: ${dataName}?`);
+      if (!confirmDelete) return;
+
+      try {
+        const response = await fetch('/api/method/hopkins.api.address.delete_address', {
+          method: 'DELETE',
+          headers: HEADERS,
+          body: JSON.stringify({name: dataName})
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          Toastify({
+            text: 'Address deleted successfully',
+            close: true,
+            gravity: "top",
+            position: "center",
+            stopOnFocus: true,
+            style: {
+              background: "linear-gradient(to right, #00b09b, #96c93d)",
+            }
+          }).showToast();
+
+          const addressSection = button.closest('section');
+          addressSection?.remove();
+        } else {
+          Toastify({
+            text: `Failed to delete address: ${(result.message || 'Unknown error')}`,
+            close: true,
+            gravity: "top",
+            position: "center",
+            stopOnFocus: true,
+            style: {
+              background: "linear-gradient(to right, #00b09b, #96c93d)",
+            }
+          }).showToast();
+        }
+
+      } catch (err) {
+        console.error('Delete error:', err);
+        Toastify({
+          text: 'An error occurred while deleting the address.',
+          close: true,
+          gravity: "top",
+          position: "center",
+          stopOnFocus: true,
+          style: {
+            background: "linear-gradient(to right, #00b09b, #96c93d)",
+          }
+        }).showToast();
+      }
+    });
   });
 
-  // Confirm and update values
-  document.getElementById("confirmVariantSelection").addEventListener("click", () => {
-    if (!currentAddressSection) return;
 
-    const data = {
-      address_line1: document.getElementById('modalAddressLine1').value,
-      city: document.getElementById('modalCity').value,
-      country: document.getElementById('modalCountry').value,
-      pincode: document.getElementById('modalPincode').value,
-      phone: document.getElementById('modalPhone').value,
-      doctype: "Address",
-      address_type: 'Billing',
-      web_form_name: 'addresses',
-      name: currentDataName
-    };
-
+  function addressCreateUpdate(data) {
     const payload = {
       data: JSON.stringify(data),
       web_form: "addresses",
@@ -659,30 +795,26 @@ document.addEventListener("DOMContentLoaded", function () {
       body: JSON.stringify(payload)
     })
       .then(response => response.json())
-      .then(data => {
-        console.log('Success:', data);
-        location.reload();
+      .then(() => {
+        Toastify({
+          text: 'Address Created successfully',
+          close: true,
+          gravity: "top",
+          position: "center",
+          stopOnFocus: true,
+          style: {
+            background: "linear-gradient(to right, #00b09b, #96c93d)",
+          }
+        }).showToast();
+        setTimeout(() => {
+          window.location.href = '/profile?showTab=3';
+        }, 500);
       })
       .catch(error => {
         console.error('Error:', error);
       });
-
-    modal.style.display = "none";
-  });
-  const createForm = document.getElementById("address_create_form");
-
-  document.getElementById("addNewAddressBtn").addEventListener("click", () => {
-    modalBody.innerHTML = "";
-
-    const formClone = createForm.cloneNode(true);
-    formClone.style.display = "block";
-    formClone.removeAttribute("id");
-    modalBody.appendChild(formClone);
-
-    modal.style.display = "flex";
-  });
+  }
 });
-
 
 frappe.get_cookie = function getCookie(name) {
   return frappe.get_cookies()[name];
