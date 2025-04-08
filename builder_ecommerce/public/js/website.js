@@ -721,7 +721,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (!confirmDelete) return;
 
       try {
-        const response = await fetch('/api/method/hopkins.api.address.delete_address', {
+        const response = await fetch('/api/method/builder_ecommerce.api.address.delete_address', {
           method: 'DELETE',
           headers: HEADERS,
           body: JSON.stringify({name: dataName})
