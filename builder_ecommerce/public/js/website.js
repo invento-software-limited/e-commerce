@@ -349,7 +349,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-
   function get_cart_items() {
     const cartItems = frappe.get_cookie("cart_items") || "[]";
 
@@ -485,7 +484,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }).showToast();
       });
   }
-
 
   function update_cart_qty(item_code, qty, action) {
     fetch('/api/method/builder_ecommerce.cart.update_cart_qty', {
@@ -813,6 +811,40 @@ document.addEventListener("DOMContentLoaded", function () {
       .catch(error => {
         console.error('Error:', error);
       });
+  }
+
+  const limit = page_data.limit;
+  const totalProducts = page_data.total_products;
+  let currentPage = page_data.page;
+  const totalPages = Math.ceil(totalProducts / limit);
+
+  const previousBtn = document.getElementById('previous_button');
+  const nextBtn = document.getElementById('next_button');
+
+  if (previousBtn) {
+    previousBtn.addEventListener('click', () => {
+      console.log("Previous clicked");
+      if (currentPage > 1) {
+        currentPage--;
+        goToPage(currentPage);
+      }
+    });
+  }
+
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      console.log("Next clicked");
+      if (currentPage < totalPages) {
+        currentPage++;
+        goToPage(currentPage);
+      }
+    });
+  }
+
+  function goToPage(page) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', page);
+    window.location.href = url.toString(); // Triggers full reload
   }
 });
 
