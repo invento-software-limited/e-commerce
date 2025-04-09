@@ -236,28 +236,38 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const dropdownButtons = document.querySelectorAll(".dropdown-btn");
 
-  dropdownButtons.forEach((btn) => {
-    const dropdownList = btn.nextElementSibling; // Get the corresponding dropdown list
+  if (dropdownButtons.length > 0) {
+    dropdownButtons.forEach((btn) => {
+      const dropdownList = btn.nextElementSibling;
 
-    btn.addEventListener("mouseover", function () {
-      positionDropdown(this, dropdownList);
-    });
+      // Check if dropdownList exists
+      if (!dropdownList) return;
 
-    btn.addEventListener("mouseleave", function (event) {
-      // Check if mouse moves into the dropdown list
-      if (!dropdownList.contains(event.relatedTarget)) {
+      // Show dropdown on hover
+      btn.addEventListener("mouseover", function () {
+        positionDropdown(this, dropdownList);
+        dropdownList.style.display = "flex";
+      });
+
+      // Hide dropdown when mouse leaves the button
+      btn.addEventListener("mouseleave", function (event) {
+        if (!dropdownList.contains(event.relatedTarget)) {
+          dropdownList.style.display = "none";
+        }
+      });
+
+      // Keep dropdown visible while hovering over it
+      dropdownList.addEventListener("mouseover", function () {
+        dropdownList.style.display = "flex";
+      });
+
+      // Hide dropdown when mouse leaves the dropdown
+      dropdownList.addEventListener("mouseleave", function () {
         dropdownList.style.display = "none";
-      }
+      });
     });
+  }
 
-    dropdownList.addEventListener("mouseleave", function () {
-      dropdownList.style.display = "none";
-    });
-
-    dropdownList.addEventListener("mouseover", function () {
-      dropdownList.style.display = "flex";
-    });
-  });
 
   function positionDropdown(button, dropdown) {
     const rect = button.getBoundingClientRect();
