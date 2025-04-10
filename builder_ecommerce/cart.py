@@ -251,13 +251,70 @@ def set_cart_count(quotation=None, cart_items=None):
     return cart_count
 
 
+# @frappe.whitelist(allow_guest=True)
+# def get_cart_items(quotation=None):
+#     """
+#     Retrieve the list of items in the cart for the guest or logged-in user.
+#
+#     - For logged-in users, it fetches the items from the associated Quotation.
+#     - For guest users, it fetches the items stored in cookies and retrieves item details.
+#
+#     Args:
+#         quotation (Optional[frappe.model.document.Document]): The Quotation document for logged-in users.
+#
+#     Returns:
+#         list: A list of dictionaries containing item details (name, code, quantity, image) for each cart item.
+#     """
+#
+#     default_currency = frappe.db.get_single_value("Global Defaults", "default_currency")
+#     if frappe.session.user != "Guest":
+#         if not quotation:
+#             quotation = _get_cart_quotation()
+#         quotation_items = [
+#             {
+#                 "item_name": item.item_name,
+#                 "item_code": item.item_code,
+#                 "qty": item.qty,
+#                 "image": item.image if item.image else '/assets/hopkins/img/no-image-250x250.png',
+#                 "rate": frappe.utils.fmt_money(item.rate, currency=default_currency),
+#                 "amount": frappe.utils.fmt_money(item.amount, currency=default_currency),
+#             }
+#             for item in quotation.get("items", [])
+#         ]
+#
+#         order_details = calculate_taxes_and_totals(quotation=quotation) if len(quotation.get("items")) > 0 else None
+#         return quotation_items, order_details
+#
+#     elif frappe.session.user == "Guest":
+#         cart_items = frappe.local.request.args.get('cart_items')
+#
+#         if cart_items:
+#             cart_items = json.loads(cart_items)
+#         else:
+#             cart_items = []
+#
+#         modified_cart_items = []
+#
+#         for item in cart_items:
+#             item_details = frappe.get_cached_doc("Item", item.get("item_code"))
+#
+#             item_dict = {
+#                 "item_name": item_details.item_name,
+#                 "item_code": item_details.item_code,
+#                 "qty": item.get("qty"),
+#                 "image": item_details.image if item_details.image else '/assets/hopkins/img/no-image-250x250.png',
+#                 "rate": frappe.utils.fmt_money(item.get("price", 0), currency=default_currency),
+#                 "amount": frappe.utils.fmt_money(item.get("price", 0) * item.get('qty', 0), currency=default_currency),
+#             }
+#
+#             modified_cart_items.append(item_dict)
+#         order_details = calculate_taxes_and_totals(cart_items=cart_items)
+#         return modified_cart_items, order_details
+
 @frappe.whitelist(allow_guest=True)
 def get_cart_items(quotation=None):
     """
     Retrieve the list of items in the cart for the guest or logged-in user.
-
-    - For logged-in users, it fetches the items from the associated Quotation.
-    - For guest users, it fetches the items stored in cookies and retrieves item details.
 
     Args:
         quotation (Optional[frappe.model.document.Document]): The Quotation document for logged-in users.
@@ -265,51 +322,78 @@ def get_cart_items(quotation=None):
     Returns:
         list: A list of dictionaries containing item details (name, code, quantity, image) for each cart item.
     """
-
     default_currency = frappe.db.get_single_value("Global Defaults", "default_currency")
+
     if frappe.session.user != "Guest":
         if not quotation:
             quotation = _get_cart_quotation()
-        quotation_items = [
-            {
-                "item_name": item.item_name,
-                "item_code": item.item_code,
-                "qty": item.qty,
-                "image": item.image,
-                "rate": frappe.utils.fmt_money(item.rate, currency=default_currency),
-                "amount": frappe.utils.fmt_money(item.amount, currency=default_currency),
-            }
-            for item in quotation.get("items", [])
-        ]
-
-        order_details = calculate_taxes_and_totals(quotation=quotation) if len(quotation.get("items")) > 0 else None
-        return quotation_items, order_details
+        return get_cart_items_for_logged_in_user(quotation, default_currency)
 
     elif frappe.session.user == "Guest":
-        cart_items = frappe.local.request.args.get('cart_items')
+        return get_cart_items_for_guest_user(default_currency)
 
-        if cart_items:
-            cart_items = json.loads(cart_items)
-        else:
-            cart_items = []
+@frappe.whitelist(allow_guest=True)
+def get_order_details(quotation=None, cart_items=None):
+    """
+    Calculate and return the order details for both logged-in and guest users.
 
-        modified_cart_items = []
+    Args:
+        quotation (Optional[frappe.model.document.Document]): The Quotation document for logged-in users.
+        cart_items (Optional[list]): List of cart items for guest users.
 
-        for item in cart_items:
-            item_details = frappe.get_cached_doc("Item", item.get("item_code"))
+    Returns:
+        dict: Order details such as taxes, totals, etc.
+    """
+    if frappe.session.user != "Guest":
+        if not quotation:
+            quotation = _get_cart_quotation()
+        return calculate_taxes_and_totals(quotation=quotation) if len(quotation.get("items")) > 0 else None
 
-            item_dict = {
-                "item_name": item_details.item_name,
-                "item_code": item_details.item_code,
-                "qty": item.get("qty"),
-                "image": item_details.image,
-                "rate": frappe.utils.fmt_money(item.get("price", 0), currency=default_currency),
-                "amount": frappe.utils.fmt_money(item.get("price", 0) * item.get('qty', 0), currency=default_currency),
-            }
+    elif frappe.session.user == "Guest":
+        return calculate_taxes_and_totals(cart_items=cart_items)
 
-            modified_cart_items.append(item_dict)
-        order_details = calculate_taxes_and_totals(cart_items=cart_items)
-        return modified_cart_items, order_details
+
+def get_cart_items_for_logged_in_user(quotation, default_currency):
+    """Helper function to get cart items for logged-in users."""
+    return [
+        {
+            "item_name": item.item_name,
+            "item_code": item.item_code,
+            "qty": item.qty,
+            "image": item.image if item.image else '/assets/hopkins/img/no-image-250x250.png',
+            "rate": frappe.utils.fmt_money(item.rate, currency=default_currency),
+            "amount": frappe.utils.fmt_money(item.amount, currency=default_currency),
+        }
+        for item in quotation.get("items", [])
+    ]
+
+
+def get_cart_items_for_guest_user(default_currency):
+    """Helper function to get cart items for guest users."""
+    cart_items = frappe.local.request.args.get('cart_items')
+
+    if cart_items:
+        cart_items = json.loads(cart_items)
+    else:
+        cart_items = []
+
+    modified_cart_items = []
+
+    for item in cart_items:
+        item_details = frappe.get_cached_doc("Item", item.get("item_code"))
+
+        item_dict = {
+            "item_name": item_details.item_name,
+            "item_code": item_details.item_code,
+            "qty": item.get("qty"),
+            "image": item_details.image if item_details.image else '/assets/hopkins/img/no-image-250x250.png',
+            "rate": frappe.utils.fmt_money(item.get("price", 0), currency=default_currency),
+            "amount": frappe.utils.fmt_money(item.get("price", 0) * item.get('qty', 0), currency=default_currency),
+        }
+
+        modified_cart_items.append(item_dict)
+
+    return modified_cart_items
 
 
 @frappe.whitelist(allow_guest=True)
@@ -343,7 +427,9 @@ def update_cart_qty(item_code, qty, action, cart_items=None, quotation=None):
                 if action == "add":
                     item["qty"] += qty
                 elif action == "remove":
-                    item["qty"] = max(1, item["qty"] - qty)
+                    item["qty"] -= qty
+                    if item["qty"] < 1:
+                        cart_items.remove(item)
                 elif action == "delete":
                     cart_items.remove(item)
                 break
@@ -368,7 +454,9 @@ def update_cart_qty(item_code, qty, action, cart_items=None, quotation=None):
             if action == "add":
                 existing_item.qty += int(qty)
             elif action == "remove":
-                existing_item.qty = max(1, existing_item.qty - int(qty))
+                existing_item.qty -= qty
+                if existing_item.qty < 1:
+                    quotation.items.remove(existing_item)
             elif action == "delete":
                 quotation.items.remove(existing_item)
         else:
