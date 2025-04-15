@@ -332,6 +332,7 @@ def get_cart_items(quotation=None):
     elif frappe.session.user == "Guest":
         return get_cart_items_for_guest_user(default_currency)
 
+
 @frappe.whitelist(allow_guest=True)
 def get_order_details(quotation=None, cart_items=None):
     """
@@ -350,6 +351,8 @@ def get_order_details(quotation=None, cart_items=None):
         return calculate_taxes_and_totals(quotation=quotation) if len(quotation.get("items")) > 0 else None
 
     elif frappe.session.user == "Guest":
+        if isinstance(cart_items, str):
+            cart_items = frappe.parse_json(cart_items)
         return calculate_taxes_and_totals(cart_items=cart_items)
 
 

@@ -398,7 +398,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function get_cart_count() {
     const cartCount = frappe.get_cookie("cart_count") || 0;
-    const cartTotal = frappe.get_cookie("cart_total") || 0;
+    const cartTotal = frappe.get_cookie("cart_total") || '€ 0.00';
     const cartCountContainer = document.getElementById("cart_count");
     const cartTotalContainer = document.getElementById("cart_total");
     if (cartCountContainer) {
