@@ -122,7 +122,7 @@ document.addEventListener("DOMContentLoaded", function () {
       };
     }
 
-    const handleSearch = debounce(function () {
+    function doSearch() {
       const searchTerm = searchInput.value.trim().toLowerCase();
 
       if (searchTerm === "") {
@@ -156,11 +156,12 @@ document.addEventListener("DOMContentLoaded", function () {
         fragment.appendChild(tempContainer);
       });
 
-      productSearch.innerHTML = ""; // Clear before appending
+      productSearch.innerHTML = "";
       productSearch.appendChild(fragment);
       positionProductSearch();
-    }, 200);
+    }
 
+    const handleSearch = debounce(doSearch, 1000);
     searchInput.addEventListener("input", handleSearch);
   }
 
@@ -592,8 +593,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function update_cart_qty(item_code, qty, action) {
     fetch('/api/method/builder_ecommerce.cart.update_cart_qty', {
-      method: "POST", headers: HEADERS, body: JSON.stringify({
-        item_code: item_code, qty: qty, action: action, cart_items: frappe.get_cookie("cart_items") || "[]"
+      method: "POST",
+      headers: HEADERS,
+      body: JSON.stringify({
+        item_code: item_code,
+        qty: qty,
+        action: action,
+        cart_items: frappe.get_cookie("cart_items") || "[]"
       })
     })
       .then(response => {
@@ -605,8 +611,17 @@ document.addEventListener("DOMContentLoaded", function () {
         return response.json();
       })
       .then(data => {
+        let item = data.message;
+        if (typeof item === 'string') {
+          try {
+            item = JSON.parse(item);
+          } catch (e) {
+            console.error('Error parsing cartItems:', e);
+            item = [];
+          }
+        }
         Toastify({
-          text: "Item added to cart!",
+          text: "Cart Updated!",
           close: true,
           destination: "/cart",
           gravity: "top",
@@ -617,24 +632,34 @@ document.addEventListener("DOMContentLoaded", function () {
           }
         }).showToast();
         const cartItems = frappe.get_cookie("cart_items") || "[]";
-        get_order_details(cartItems)
+        get_order_details(cartItems);
 
-        get_cart_count()
+        const cartElement = document.getElementById("cart-section");
+        const emptyElement = document.getElementById("empty-cart");
+
+        console.log(JSON.parse(cartItems).length)
+
+        if (item.length === 0 && cartElement && emptyElement) {
+          cartElement.style.display = "none";
+          emptyElement.style.display = 'flex';
+        }
+
+        get_cart_count();
       })
       .catch(error => {
         Toastify({
-          text: `Error adding item: ${(error.message || "Unknown error")}`,
+          text: `❌ Error updating cart: ${error.message || "Unknown error"}`,
           close: true,
           gravity: "top",
           position: "center",
           stopOnFocus: true,
           style: {
-            background: "linear-gradient(to right, #00b09b, #96c93d)",
+            background: "linear-gradient(to right, #ff5f6d, #ffc371)",
           }
         }).showToast();
       });
-
   }
+
 
   const newsletterForm = document.getElementById("newsletter_subscribe");
 
@@ -703,8 +728,8 @@ document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll('.collapse-btn').forEach(button => {
     button.addEventListener('click', function () {
       const categoryId = this.getAttribute('data-category_id');
-      const targetDiv = document.getElementById(categoryId);
-      const extendButton = this.parentElement.querySelector('.extend-btn'); // Find extend-btn within the same parent
+      const targetDiv = this.parentElement.parentElement.parentElement.querySelector(`[data-name="${categoryId}"]`);
+      const extendButton = this.parentElement.querySelector('.extend-btn');
 
       if (targetDiv) {
         targetDiv.style.display = 'none';
@@ -719,7 +744,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll('.extend-btn').forEach(button => {
     button.addEventListener('click', function () {
       const categoryId = this.getAttribute('data-category_id');
-      const targetDiv = document.getElementById(categoryId);
+      const targetDiv = this.parentElement.parentElement.parentElement.querySelector(`[data-name="${categoryId}"]`);
       const collapseButton = this.parentElement.querySelector('.collapse-btn');
 
       if (targetDiv) {
