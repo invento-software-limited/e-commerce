@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", function () {
               background: "linear-gradient(to right, #00b09b, #96c93d)",
             }
           }).showToast();
+          get_cart_count()
           let placeOrderDiv = document.getElementById('place-order');
           let successOrderDiv = document.getElementById('order_sucess');
           let orderIdElement = document.getElementById('order_id');
