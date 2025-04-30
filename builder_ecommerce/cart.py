@@ -354,7 +354,6 @@ def get_order_details(quotation=None, cart_items=None):
         if isinstance(cart_items, str):
             cart_items = frappe.parse_json(cart_items)
         return calculate_taxes_and_totals(cart_items=cart_items)
-    return None
 
 
 def get_cart_items_for_logged_in_user(quotation, default_currency):
@@ -445,61 +444,37 @@ def update_cart_qty(item_code, qty, action, cart_items=None, quotation=None):
             })
         frappe.local.cookie_manager.set_cookie("cart_items", json.dumps(cart_items))
     else:
+        empty_card = False
         if not quotation:
             quotation = _get_cart_quotation()
 
         if not quotation:
             return []
 
-        quotation_name = quotation.name
-        item = frappe.db.get_value(
-            "Quotation Item",
-            {"parent": quotation_name, "item_code": item_code},
-            ["name", "qty"],
-            as_dict=True
-        )
+        existing_item = next((item for item in quotation.items if item.item_code == item_code), None)
 
-        qty = int(qty)
-
-        if item:
+        if existing_item:
             if action == "add":
-                new_qty = item.qty + qty
-                frappe.db.set_value("Quotation Item", item.name, "qty", new_qty)
+                existing_item.qty += int(qty)
             elif action == "remove":
-                new_qty = item.qty - qty
-                if new_qty < 1:
-                    frappe.db.delete("Quotation Item", item.name)
-                else:
-                    frappe.db.set_value("Quotation Item", item.name, "qty", new_qty)
+                existing_item.qty -= qty
+                if existing_item.qty < 1:
+                    quotation.items.remove(existing_item)
             elif action == "delete":
-                frappe.db.delete("Quotation Item", item.name)
+                quotation.items.remove(existing_item)
         else:
             if action == "add":
-                frappe.get_doc({
-                    "doctype": "Quotation Item",
-                    "parent": quotation_name,
-                    "parenttype": "Quotation",
-                    "parentfield": "items",
+                quotation.append("items", {
                     "item_code": item_code,
-                    "qty": qty
-                }).insert(ignore_permissions=True)
+                    "qty": int(qty)
+                })
 
-        # Check if any items remain, delete quotation if empty
-        remaining_items = frappe.get_all("Quotation Item", filters={"parent": quotation_name})
-        if not remaining_items:
-            frappe.delete_doc("Quotation", quotation_name)
-            cart_items = []
+        if len(quotation.get('items')) == 0:
+            quotation.delete()
         else:
-            cart_items = frappe.get_all(
-                "Quotation Item",
-                filters={"parent": quotation_name},
-                fields=["item_code", "qty"]
-            )
-
-        frappe.local.cookie_manager.set_cookie("cart_items", json.dumps(cart_items))
-
-        frappe.db.commit()
-
+            quotation.save(ignore_version=True)
+            frappe.db.commit()
+            cart_items = quotation.items
 
     set_cart_count(cart_items=cart_items)
     return cart_items

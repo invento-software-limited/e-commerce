@@ -137,7 +137,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return (
           product.item_name?.toLowerCase().includes(search) ||
           product.item_code?.toLowerCase().includes(search) ||
-          product.custom_oem_part_no?.toLowerCase().includes(search)||
+          product.custom_oem_part_no?.toLowerCase().includes(search) ||
           product.description?.toLowerCase().includes(search)
         );
       });
@@ -474,7 +474,12 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             let priceElement = tempContainer.querySelector('.price');
             if (priceElement) {
-              priceElement.textContent = item.amount;
+              priceElement.textContent = item.rate;
+            }
+
+            let amountElement = tempContainer.querySelector('.amount');
+            if (amountElement) {
+              amountElement.textContent = item.amount;
             }
 
             let rateElement = tempContainer.querySelector('.rate p');
@@ -488,6 +493,7 @@ document.addEventListener("DOMContentLoaded", function () {
               updateElement.onclick = function () {
                 let itemCode = this.dataset.itemCode;
                 let action = this.dataset.action;
+                let product = page_data.products.find(p => p.item_code === itemCode);
                 let changeQty = parseInt(this.dataset.qty) || 1;
                 let newQty = parseInt(qtyElement.textContent) || 1;
                 let itemContainer = tempContainer.closest(".cart-item");
@@ -507,6 +513,15 @@ document.addEventListener("DOMContentLoaded", function () {
                   }
                 } else {
                   qtyElement.textContent = newQty;
+                }
+                let amountElement = tempContainer.querySelector('.amount');
+                if (amountElement) {
+                  let standardRate = 0;
+                  if (product && product.standard_rate) {
+                    standardRate = parseFloat(product.standard_rate.replace(/[^0-9.]/g, '')) || 0;
+                  }
+                  let amount = (standardRate * newQty).toFixed(2);
+                  amountElement.textContent = `£ ${amount}`;
                 }
               };
             });
