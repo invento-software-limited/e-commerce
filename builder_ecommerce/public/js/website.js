@@ -132,9 +132,14 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      const filteredProducts = page_data.products.filter(product =>
-        product.item_name.toLowerCase().includes(searchTerm)
-      );
+      const filteredProducts = page_data.products.filter(product => {
+        const search = searchTerm.toLowerCase();
+        return (
+          product.item_name?.toLowerCase().includes(search) ||
+          product.item_code?.toLowerCase().includes(search) ||
+          product.custom_oem_part_no?.toLowerCase().includes(search)
+        );
+      });
 
       const fragment = document.createDocumentFragment();
 
