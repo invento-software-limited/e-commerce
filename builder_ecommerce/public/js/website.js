@@ -137,7 +137,8 @@ document.addEventListener("DOMContentLoaded", function () {
         return (
           product.item_name?.toLowerCase().includes(search) ||
           product.item_code?.toLowerCase().includes(search) ||
-          product.custom_oem_part_no?.toLowerCase().includes(search)
+          product.custom_oem_part_no?.toLowerCase().includes(search)||
+          product.description?.toLowerCase().includes(search)
         );
       });
 
