@@ -143,7 +143,7 @@ def update_cart(item_code, qty, additional_notes=None, cart_items=None):
     quotation.flags.ignore_permissions = True
     quotation.payment_schedule = []
     if not empty_card:
-        quotation.save()
+        quotation.save(ignore_version=True)
     else:
         quotation.delete()
         quotation = None
@@ -354,6 +354,7 @@ def get_order_details(quotation=None, cart_items=None):
         if isinstance(cart_items, str):
             cart_items = frappe.parse_json(cart_items)
         return calculate_taxes_and_totals(cart_items=cart_items)
+    return None
 
 
 def get_cart_items_for_logged_in_user(quotation, default_currency):
@@ -444,37 +445,61 @@ def update_cart_qty(item_code, qty, action, cart_items=None, quotation=None):
             })
         frappe.local.cookie_manager.set_cookie("cart_items", json.dumps(cart_items))
     else:
-        empty_card = False
         if not quotation:
             quotation = _get_cart_quotation()
 
         if not quotation:
             return []
 
-        existing_item = next((item for item in quotation.items if item.item_code == item_code), None)
+        quotation_name = quotation.name
+        item = frappe.db.get_value(
+            "Quotation Item",
+            {"parent": quotation_name, "item_code": item_code},
+            ["name", "qty"],
+            as_dict=True
+        )
 
-        if existing_item:
+        qty = int(qty)
+
+        if item:
             if action == "add":
-                existing_item.qty += int(qty)
+                new_qty = item.qty + qty
+                frappe.db.set_value("Quotation Item", item.name, "qty", new_qty)
             elif action == "remove":
-                existing_item.qty -= qty
-                if existing_item.qty < 1:
-                    quotation.items.remove(existing_item)
+                new_qty = item.qty - qty
+                if new_qty < 1:
+                    frappe.db.delete("Quotation Item", item.name)
+                else:
+                    frappe.db.set_value("Quotation Item", item.name, "qty", new_qty)
             elif action == "delete":
-                quotation.items.remove(existing_item)
+                frappe.db.delete("Quotation Item", item.name)
         else:
             if action == "add":
-                quotation.append("items", {
+                frappe.get_doc({
+                    "doctype": "Quotation Item",
+                    "parent": quotation_name,
+                    "parenttype": "Quotation",
+                    "parentfield": "items",
                     "item_code": item_code,
-                    "qty": int(qty)
-                })
+                    "qty": qty
+                }).insert(ignore_permissions=True)
 
-        if len(quotation.get('items')) == 0:
-            quotation.delete()
+        # Check if any items remain, delete quotation if empty
+        remaining_items = frappe.get_all("Quotation Item", filters={"parent": quotation_name})
+        if not remaining_items:
+            frappe.delete_doc("Quotation", quotation_name)
+            cart_items = []
         else:
-            quotation.save()
-            frappe.db.commit()
-            cart_items = quotation.items
+            cart_items = frappe.get_all(
+                "Quotation Item",
+                filters={"parent": quotation_name},
+                fields=["item_code", "qty"]
+            )
+
+        frappe.local.cookie_manager.set_cookie("cart_items", json.dumps(cart_items))
+
+        frappe.db.commit()
+
 
     set_cart_count(cart_items=cart_items)
     return cart_items
@@ -801,7 +826,7 @@ def add_items_to_quotation(quotation, cart_items):
             },
         )
     quotation.run_method("set_missing_values")
-    quotation.save(ignore_permissions=True)
+    quotation.save(ignore_permissions=True, ignore_version=True)
     frappe.local.cookie_manager.set_cookie("cart_items", [])
     set_cart_count(cart_items=[])
 
@@ -1053,7 +1078,7 @@ def calculate_taxes_and_totals(quotation=None, cart_items=None):
             quotation.append("taxes", tax_row_dict)
 
         quotation.run_method("calculate_taxes_and_totals")
-        quotation.save(ignore_permissions=True)
+        quotation.save(ignore_permissions=True, ignore_version=True)
         frappe.db.commit()
 
         total_price = flt(quotation.get("total"))

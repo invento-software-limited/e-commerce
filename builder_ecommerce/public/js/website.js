@@ -597,7 +597,12 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
 
+  let isCartUpdateInProgress = false;
+
   function update_cart_qty(item_code, qty, action) {
+    if (isCartUpdateInProgress) return; // Prevent multiple simultaneous calls
+    isCartUpdateInProgress = true;
+
     fetch('/api/method/builder_ecommerce.cart.update_cart_qty', {
       method: "POST",
       headers: HEADERS,
@@ -626,6 +631,7 @@ document.addEventListener("DOMContentLoaded", function () {
             item = [];
           }
         }
+
         Toastify({
           text: "Cart Updated!",
           close: true,
@@ -637,13 +643,12 @@ document.addEventListener("DOMContentLoaded", function () {
             background: "linear-gradient(to right, #00b09b, #96c93d)",
           }
         }).showToast();
+
         const cartItems = frappe.get_cookie("cart_items") || "[]";
         get_order_details(cartItems);
 
         const cartElement = document.getElementById("cart-section");
         const emptyElement = document.getElementById("empty-cart");
-
-        console.log(JSON.parse(cartItems).length)
 
         if (item.length === 0 && cartElement && emptyElement) {
           cartElement.style.display = "none";
@@ -663,6 +668,9 @@ document.addEventListener("DOMContentLoaded", function () {
             background: "linear-gradient(to right, #ff5f6d, #ffc371)",
           }
         }).showToast();
+      })
+      .finally(() => {
+        isCartUpdateInProgress = false; // Release lock after request
       });
   }
 
